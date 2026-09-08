@@ -119,6 +119,89 @@ import AppKit
             case 30:
                 let task = try repo.tasks().first { $0.title == "控件验收 · 实际新增" }!
                 try require(state.existingWorkGoal == nil && task.goalID == state.goals[1].id && task.percent == 50 && repo.tasks().count == 10, "已属其他目标的工作确认后只更换归属")
+                var practice = PlanDraft(title: "行动检查 · 每日练习", day: Day.string(Date()), start: 480, end: 540)
+                practice.repeatKind = .daily; practice.until = try Day.shifted(practice.day, by: 29)
+                try repo.add(practice, now: Date())
+                var reading = practice; reading.title = "行动检查 · 每日阅读"; reading.start = 600; reading.end = 630
+                try repo.add(reading, now: Date())
+                let first = try repo.tasks().first { $0.title == practice.title }!
+                try repo.record(taskID: first.id, percent: 100, note: "今日完成", now: Date())
+                try state.reload(); state.existingWorkGoal = state.goals[0]
+            case 31:
+                try type("行动检查")
+            case 32:
+                try require(ExistingWorkSheet(goal: state.goals[0]).groupedCandidates(state.tasks).filter { $0.matches("行动检查") }.count == 2,
+                            "选择窗口60次每日安排归为两项行动")
+                let chooser = ExistingWorkSheet(goal: state.goals[0])
+                let sample = WorkAction.grouped(state.tasks).first { $0.title == "行动检查 · 每日练习" }!
+                var partial = sample.tasks
+                partial[0].goalID = state.goals[0].id
+                try require(chooser.groupedCandidates(partial).first?.tasks.count == 30, "部分日期已有归属仍保留完整组供选择")
+                let allLinked = partial.map { task -> WorkItem in var value = task; value.goalID = state.goals[0].id; return value }
+                try require(chooser.groupedCandidates(allLinked).isEmpty, "整组全部已在目标时不重复列出")
+                var separate = PlanDraft(title: sample.title, day: sample.tasks[0].day, start: 480, end: 540)
+                separate.repeatKind = .daily; separate.until = sample.tasks.last!.day
+                try require(chooser.groupedCandidates(partial + separate.makeTasks()).count == 2, "同名独立重复安排在选择器仍分两组")
+                try captureSheet("native-action-choices.png")
+                try clickChoice()
+            case 33:
+                try captureSheet("native-action-preview.png")
+                try key("\u{1b}", code: 53)
+            case 34:
+                try require(state.existingWorkGoal == nil && repo.tasks().filter { $0.title.hasPrefix("行动检查") }.allSatisfy { $0.goalID == nil }, "整组选择取消不保存任何一天")
+                state.existingWorkGoal = state.goals[0]
+            case 35:
+                try type("行动检查 · 每日练习")
+            case 36:
+                try clickChoice()
+            case 37:
+                try key("\r", code: 36)
+            case 38:
+                let tasks = try repo.tasks().filter { $0.title == "行动检查 · 每日练习" }
+                try require(state.existingWorkGoal == nil && tasks.count == 30 && tasks.allSatisfy { $0.goalID == state.goals[0].id } && tasks.first?.percent == 100,
+                            "已有工作窗口整组30天加入目标，今日进度保留")
+                state.page = .goals
+            case 39:
+                if let view = window.contentView { try saveView(view, to: state.dataFolder.appendingPathComponent("native-action-goal.png")) }
+                let task = try repo.tasks().first { $0.title == "行动检查 · 每日练习" }!
+                state.goalTask = task
+            case 40:
+                try clickChoice(offset: 90)
+            case 41:
+                try captureSheet("native-action-move.png")
+                try key("\r", code: 36)
+            case 42:
+                let tasks = try repo.tasks().filter { $0.title == "行动检查 · 每日练习" }
+                try require(state.goalTask == nil && tasks.allSatisfy { $0.goalID == state.goals[1].id } && repo.tasks().count == 70,
+                            "每日入口更换整组目标，不留其余日期在旧目标")
+                let action = WorkAction.grouped(tasks)[0]
+                try require(action.progress(through: Day.string(Date())).completedDays == 1 && action.progress(through: Day.string(Date())).scheduledDays == 1,
+                            "目标行动显示今日完成一天，不把未来29天算漏记")
+                let reading = try repo.tasks().filter { $0.title == "行动检查 · 每日阅读" }
+                for index in 0..<5 {
+                    let goal = try repo.addGoal(title: "长名称目标\(index + 1) · 持续阅读并整理每一章的核心内容与自己的理解，按周回顾并写下下一阶段准备改进的具体做法")
+                    try repo.setGoal(taskID: reading[index].id, goalID: goal.id, expected: reading[index])
+                }
+                try state.reload(); state.existingWorkGoal = state.goals[0]
+            case 43:
+                try type("行动检查 · 每日阅读")
+            case 44:
+                try clickChoice()
+            case 45:
+                try scrollOwnershipAndCapture()
+                let reading = try repo.tasks().first { $0.title == "行动检查 · 每日阅读" }!
+                try repo.record(taskID: reading.id, percent: 50, note: "预览期间的新进度", now: Date())
+                try state.reload()
+                try repo.backup().write(to: state.dataFolder.appendingPathComponent("stale-preview-backup.json"), options: .atomic)
+            case 46:
+                try key("\r", code: 36)
+            case 47:
+                let saved = try Data(contentsOf: state.dataFolder.appendingPathComponent("stale-preview-backup.json"))
+                try require(state.existingWorkGoal != nil && repo.backup() == saved, "预览后刷新仍保留旧快照，拒绝整组覆盖新进度并保留表单")
+                try captureSheet("native-action-stale.png")
+                try key("\u{1b}", code: 53)
+            case 48:
+                try require(state.existingWorkGoal == nil, "整组过时错误后仍可取消")
                 let backup = try repo.backup()
                 let reopened = try Repository(path: repo.path)
                 try require(try backup == reopened.backup(), "界面操作后重开数据库无损")
@@ -180,6 +263,20 @@ import AppKit
               let corner = bitmap.colorAt(x: 8, y: 8), corner.alphaComponent > 0.99 else {
             throw UserError("目标表单背景应完整绘制，截图存在透明区域：" + name)
         }
+    }
+    private func scrollOwnershipAndCapture() throws {
+        func scrolls(_ view: NSView) -> [NSScrollView] {
+            if let scroll = view as? NSScrollView { return [scroll] }
+            return view.subviews.flatMap { scrolls($0) }
+        }
+        guard let view = window?.attachedSheet?.contentView else { throw UserError("多归属预览未打开") }
+        let all = scrolls(view)
+        guard all.count == 2, let summary = all.last, let document = summary.documentView,
+              document.bounds.height > summary.contentView.bounds.height else { throw UserError("长名称多目标预览必须能滚动查看全部归属") }
+        let y = document.isFlipped ? document.bounds.maxY - summary.contentView.bounds.height : document.bounds.minY
+        summary.contentView.scroll(to: NSPoint(x: 0, y: y)); summary.reflectScrolledClipView(summary.contentView)
+        try captureSheet("native-action-ownership.png")
+        print("界面通过：长名称与六种原归属可滚动查看，保存范围不隐藏")
     }
     private func type(_ text: String) throws {
         guard let sheet = window?.attachedSheet, let field = sheet.firstResponder as? NSTextView else {

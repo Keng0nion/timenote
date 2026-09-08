@@ -8,7 +8,7 @@ struct GoalsView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 7) {
                     Text("长期目标").font(.system(size: 25, weight: .semibold))
-                    Text("目标由你拆分，时间由你安排。").foregroundStyle(.secondary)
+                    Text("把每天坚持的行动，连到长期想完成的事。").foregroundStyle(.secondary)
                 }
                 Spacer()
                 Button { state.showGoal = true } label: { Label("新增目标", systemImage: "plus") }
@@ -26,6 +26,7 @@ struct GoalsView: View {
                     LazyVStack(alignment: .leading, spacing: 24) {
                         ForEach(state.goals) { goal in
                             let tasks = state.tasks.filter { $0.goalID == goal.id }
+                            let actions = WorkAction.grouped(tasks)
                             VStack(alignment: .leading, spacing: 14) {
                                 HStack {
                                     Text(goal.title).font(.title3.bold()); Spacer()
@@ -33,20 +34,11 @@ struct GoalsView: View {
                                         .accessibilityIdentifier("add-existing-\(goal.id)").disabled(state.repository == nil)
                                     Button("安排工作") { state.newWork(goalID: goal.id) }.disabled(state.repository == nil)
                                 }
-                                Text("已安排 \(tasks.count) 项 · 已记录 \(tasks.filter { $0.percent != nil }.count) 项")
+                                Text("推进目标的行动 · \(actions.count) 项")
                                     .font(.callout).foregroundStyle(.secondary)
-                                ForEach(tasks.prefix(12)) { task in
-                                    Button {
-                                        state.selectedDate = (try? Day.date(task.day, time: 720)) ?? Date(); state.page = .today
-                                    } label: {
-                                        HStack {
-                                            Text(task.day).monospacedDigit()
-                                            Text(task.title).lineLimit(1); Spacer()
-                                            Text(task.rangeLabel).monospacedDigit()
-                                        }.font(.callout).frame(maxWidth: .infinity, alignment: .leading)
-                                    }.buttonStyle(.plain)
+                                ForEach(actions) { action in
+                                    GoalActionRow(action: action).environmentObject(state)
                                 }
-                                if tasks.count > 12 { Text("其余 \(tasks.count - 12) 项可在每日清单按日期查看。").font(.caption).foregroundStyle(.secondary) }
                                 if tasks.isEmpty { Text("可以加入每日清单里的已有工作，也可以点“安排工作”新建。").foregroundStyle(.secondary) }
                             }.padding(20).background(Style.panel, in: RoundedRectangle(cornerRadius: 12))
                         }
@@ -55,6 +47,37 @@ struct GoalsView: View {
                 Text("已安排工作的进度，不直接当作整个目标的完成率。").font(.caption).foregroundStyle(.secondary)
             }
         }.padding(28)
+    }
+}
+
+private struct GoalActionRow: View {
+    @EnvironmentObject var state: AppState
+    let action: WorkAction
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: action.isRecurring ? "repeat" : "checklist")
+                .foregroundStyle(Style.accent).frame(width: 20).padding(.top, 2)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text(action.title).font(.callout.weight(.semibold)).lineLimit(2)
+                    Text(action.isRecurring ? "持续行动" : "单次工作").font(.caption2)
+                        .padding(.horizontal, 7).padding(.vertical, 3).background(Style.soft, in: Capsule())
+                }
+                Text(action.dateLabel + " · " + action.timeLabel).font(.caption).foregroundStyle(.secondary)
+                Text(action.progress(through: Day.string(state.now)).label).font(.caption).foregroundStyle(Style.accent)
+                if action.isRecurring {
+                    let total = state.tasks.filter { WorkAction.key(for: $0) == action.id }.count
+                    if total != action.tasks.count {
+                        Text("本目标已关联\(action.tasks.count)/\(total)次；其余日期可用“加入已有工作”整组整理。")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }.frame(maxWidth: .infinity, alignment: .leading)
+            Button("每日记录") {
+                state.selectedDate = (try? Day.date(action.destinationDay(relativeTo: Day.string(state.now)), time: 720)) ?? Date()
+                state.page = .today
+            }.font(.caption).help("查看这项行动今日或最近安排的记录")
+        }.padding(14).background(Style.soft.opacity(0.5), in: RoundedRectangle(cornerRadius: 9))
     }
 }
 

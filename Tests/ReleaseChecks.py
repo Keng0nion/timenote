@@ -32,16 +32,33 @@ class ReleaseChecks(unittest.TestCase):
         for text in [settings, third_party]:
             self.assertNotIn("未公开发布", text)
             self.assertNotIn("原始问卷", text)
-        self.assertIn("0.1.1 公开预览版", app)
+        self.assertIn("0.1.2 公开预览版", app)
         views = (sources / "Views.swift").read_text()
         self.assertNotIn("本地试用版", views)
-        self.assertIn("0.1.1 · 公开预览版", views)
+        self.assertIn("0.1.2 · 公开预览版", views)
         with (ROOT / "Resources" / "Info.plist").open("rb") as file:
             info = plistlib.load(file)
-        self.assertEqual(info["CFBundleShortVersionString"], "0.1.1")
-        self.assertEqual(info["CFBundleVersion"], "2")
+        self.assertEqual(info["CFBundleShortVersionString"], "0.1.2")
+        self.assertEqual(info["CFBundleVersion"], "3")
         self.assertEqual(info["CFBundleIdentifier"], "local.timenote.native.v1")
         self.assertEqual(info["CFBundleExecutable"], "TimeNote")
+
+    def test_recurring_action_ui_and_explanation(self):
+        sources = ROOT / "Sources" / "TimeNoteNative"
+        choices = (sources / "GoalAssignment.swift").read_text()
+        goals = (sources / "ReviewViews.swift").read_text()
+        self.assertIn("groupedCandidates", choices)
+        self.assertIn("WorkAction.grouped(tasks)", choices)
+        self.assertIn("setGoal(action:", choices)
+        self.assertNotIn("重复安排也只处理选中的这一天", choices)
+        self.assertIn("WorkAction.grouped(tasks)", goals)
+        self.assertIn("推进目标的行动", goals)
+        self.assertNotIn("ForEach(tasks.prefix(12))", goals)
+        for name in ["README.md", "RELEASE_NOTES.md"]:
+            text = (ROOT / name).read_text()
+            self.assertIn("持续行动", text)
+            self.assertIn("整组", text)
+            self.assertNotIn("重复任务的其他日期不自动跟着变", text)
 
     def test_main_license_and_bundled_entry(self):
         license_path = ROOT / "LICENSE"

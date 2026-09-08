@@ -17,7 +17,7 @@ struct RootView: View {
                         .accessibilityIdentifier("page-\(page.id)")
                 }
                 Spacer()
-                Text("0.1.1 · 公开预览版").font(.caption).foregroundStyle(.secondary)
+                Text("0.1.2 · 公开预览版").font(.caption).foregroundStyle(.secondary)
                 Text("严格提醒尚未启用").font(.caption).foregroundStyle(.secondary)
             }.padding(18).frame(width: 200).background(Style.panel.opacity(0.45))
             Divider()
@@ -45,7 +45,7 @@ struct RootView: View {
         .sheet(item: $state.editor) { context in PlanEditor(context: context).environmentObject(state) }
         .sheet(item: $state.recordTask) { task in RecordEditor(task: task).environmentObject(state) }
         .sheet(item: $state.historyTask) { task in HistoryView(task: task).environmentObject(state) }
-        .sheet(item: $state.goalTask) { task in GoalAssignmentSheet(task: task).environmentObject(state) }
+        .sheet(item: $state.goalTask) { task in GoalAssignmentSheet(task: task, tasks: state.tasks).environmentObject(state) }
         .sheet(item: $state.existingWorkGoal) { goal in ExistingWorkSheet(goal: goal).environmentObject(state) }
         .sheet(isPresented: $state.showGoal) { GoalEditor().environmentObject(state) }
         .sheet(isPresented: Binding(get: { state.importPreview != nil }, set: { if !$0 { state.importPreview = nil; state.importData = nil } })) {

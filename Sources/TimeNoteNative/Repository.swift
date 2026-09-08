@@ -149,6 +149,28 @@ final class Repository {
         }
     }
 
+    func setGoal(action: WorkAction, goalID: String?) throws {
+        try database.write { db in
+            let first = action.tasks[0]
+            let members: [WorkItem]
+            if let seriesID = first.seriesID {
+                members = try WorkItem.fetchAll(db, sql: "SELECT * FROM work WHERE seriesID = ?", arguments: [seriesID])
+            } else {
+                members = try WorkItem.fetchAll(db, sql: "SELECT * FROM work WHERE id = ?", arguments: [first.id])
+            }
+            guard WorkAction.grouped(members) == [action] else {
+                throw UserError("这组工作的安排、进度或归属已经变化，请取消并重新选择；未保存任何修改。")
+            }
+            if let goalID, try !Goal.exists(db, key: goalID) {
+                throw UserError("没有找到这个长期目标，请取消并重新打开目标列表；未保存任何修改。")
+            }
+            // 同一事务先核验完整成员，再只改归属；不覆盖逐日安排与进展历史。
+            for task in action.tasks {
+                try db.execute(sql: "UPDATE work SET goalID = ? WHERE id = ?", arguments: [goalID, task.id])
+            }
+        }
+    }
+
     func backup() throws -> Data {
         let backup = try database.read { db in
             Backup(goals: try Goal.fetchAll(db, sql: "SELECT * FROM goal ORDER BY rowid"),

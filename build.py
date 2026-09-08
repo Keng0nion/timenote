@@ -73,8 +73,8 @@ def links():
 
 def checks():
     output = BUILD / "native-checks"
-    run(COMMON + ["-warnings-as-errors", "-Onone", CORE, SOURCES / "Models.swift", SOURCES / "Repository.swift",
-                  SOURCES / "AppState.swift", ROOT / "Tests" / "NativeChecks.swift", *links(), "-Xlinker", "-rpath", "-Xlinker", BUILD,
+    run(COMMON + ["-warnings-as-errors", "-Onone", CORE, SOURCES / "Models.swift", SOURCES / "WorkAction.swift", SOURCES / "Repository.swift",
+                  SOURCES / "AppState.swift", ROOT / "Tests" / "NativeChecks.swift", ROOT / "Tests" / "ActionChecks.swift", *links(), "-Xlinker", "-rpath", "-Xlinker", BUILD,
                   "-o", output])
     run([output, BUILD / "test-data"], timeout=45)
 
