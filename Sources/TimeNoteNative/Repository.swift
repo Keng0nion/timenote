@@ -135,6 +135,20 @@ final class Repository {
         }
     }
 
+    func setGoal(taskID: String, goalID: String?, expected: WorkItem) throws {
+        try database.write { db in
+            let current = try Self.task(db, taskID)
+            guard current == expected else {
+                throw UserError("这项工作已经变化，请取消并重新打开后再选择目标；未保存任何修改。")
+            }
+            if let goalID, try !Goal.exists(db, key: goalID) {
+                throw UserError("没有找到这个长期目标，请取消并重新打开目标列表；未保存任何修改。")
+            }
+            // 归属调整不走安排编辑，不写入进度或历史，也不传播到重复系列。
+            try db.execute(sql: "UPDATE work SET goalID = ? WHERE id = ?", arguments: [goalID, taskID])
+        }
+    }
+
     func backup() throws -> Data {
         let backup = try database.read { db in
             Backup(goals: try Goal.fetchAll(db, sql: "SELECT * FROM goal ORDER BY rowid"),

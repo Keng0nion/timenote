@@ -17,7 +17,7 @@ struct RootView: View {
                         .accessibilityIdentifier("page-\(page.id)")
                 }
                 Spacer()
-                Text("0.1.0 · 公开预览版").font(.caption).foregroundStyle(.secondary)
+                Text("0.1.1 · 公开预览版").font(.caption).foregroundStyle(.secondary)
                 Text("严格提醒尚未启用").font(.caption).foregroundStyle(.secondary)
             }.padding(18).frame(width: 200).background(Style.panel.opacity(0.45))
             Divider()
@@ -45,6 +45,8 @@ struct RootView: View {
         .sheet(item: $state.editor) { context in PlanEditor(context: context).environmentObject(state) }
         .sheet(item: $state.recordTask) { task in RecordEditor(task: task).environmentObject(state) }
         .sheet(item: $state.historyTask) { task in HistoryView(task: task).environmentObject(state) }
+        .sheet(item: $state.goalTask) { task in GoalAssignmentSheet(task: task).environmentObject(state) }
+        .sheet(item: $state.existingWorkGoal) { goal in ExistingWorkSheet(goal: goal).environmentObject(state) }
         .sheet(isPresented: $state.showGoal) { GoalEditor().environmentObject(state) }
         .sheet(isPresented: Binding(get: { state.importPreview != nil }, set: { if !$0 { state.importPreview = nil; state.importData = nil } })) {
             ImportSheet().environmentObject(state)
@@ -129,6 +131,10 @@ struct WorkRow: View {
                     if !task.category.isEmpty { Text(task.category) }
                     if task.seriesID != nil { Image(systemName: "repeat").help("重复安排") }
                 }.font(.caption).foregroundStyle(.secondary)
+                if let goal = state.goals.first(where: { $0.id == task.goalID }) {
+                    Label(goal.title, systemImage: "flag").font(.caption).foregroundStyle(Style.accent)
+                        .lineLimit(1).help("长期目标：" + goal.title)
+                }
             }
             Spacer(minLength: 12)
             Button(task.day > Day.string(state.now) ? "待开始" : Statistics.percentLabel(task.percent)) { state.recordTask = task }
@@ -136,6 +142,8 @@ struct WorkRow: View {
             Menu {
                 Button("记录进展…") { state.recordTask = task }.disabled(task.day > Day.string(state.now))
                 Button("查看历史…") { state.historyTask = task }
+                Button(task.goalID == nil ? "加入长期目标…" : "调整长期目标…") { state.goalTask = task }
+                    .disabled(state.repository == nil)
                 Button("修改未来安排…") { state.editWork(task) }.disabled(!task.editable(at: state.now))
                 Divider()
                 Button("撤销最后一次手动记录") {

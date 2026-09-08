@@ -29,7 +29,9 @@ struct GoalsView: View {
                             VStack(alignment: .leading, spacing: 14) {
                                 HStack {
                                     Text(goal.title).font(.title3.bold()); Spacer()
-                                    Button("安排工作") { state.newWork(goalID: goal.id) }
+                                    Button("加入已有工作") { state.existingWorkGoal = goal }
+                                        .accessibilityIdentifier("add-existing-\(goal.id)").disabled(state.repository == nil)
+                                    Button("安排工作") { state.newWork(goalID: goal.id) }.disabled(state.repository == nil)
                                 }
                                 Text("已安排 \(tasks.count) 项 · 已记录 \(tasks.filter { $0.percent != nil }.count) 项")
                                     .font(.callout).foregroundStyle(.secondary)
@@ -45,7 +47,7 @@ struct GoalsView: View {
                                     }.buttonStyle(.plain)
                                 }
                                 if tasks.count > 12 { Text("其余 \(tasks.count - 12) 项可在每日清单按日期查看。").font(.caption).foregroundStyle(.secondary) }
-                                if tasks.isEmpty { Text("还没有拆分工作。点“安排工作”开始。").foregroundStyle(.secondary) }
+                                if tasks.isEmpty { Text("可以加入每日清单里的已有工作，也可以点“安排工作”新建。").foregroundStyle(.secondary) }
                             }.padding(20).background(Style.panel, in: RoundedRectangle(cornerRadius: 12))
                         }
                     }

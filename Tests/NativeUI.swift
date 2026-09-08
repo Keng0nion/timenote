@@ -58,11 +58,72 @@ import AppKit
                 state.page = .settings
             case 13:
                 try scrollToBottomAndCapture("native-settings-bottom.png")
+                state.page = .today; state.selectedDate = Date()
+                state.goalTask = try repo.tasks().first { $0.title == "控件验收 · 实际新增" }!
+            case 14:
+                try key("\r", code: 36)
+                try require(state.goalTask != nil, "未选择目标不能直接保存")
+                try clickChoice()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+                    do { try self?.key("\u{1b}", code: 53) } catch { print("取消按键失败：\(error)"); exit(1) }
+                }
+            case 15:
+                let task = try repo.tasks().first { $0.title == "控件验收 · 实际新增" }!
+                try require(state.goalTask == nil && task.goalID == nil, "选目标后Escape取消不保存")
+                state.goalTask = task
+            case 16:
+                try clickChoice()
+            case 17:
+                try captureSheet("native-goal-assignment.png")
+                try key("\r", code: 36)
+            case 18:
+                let task = try repo.tasks().first { $0.title == "控件验收 · 实际新增" }!
+                try require(state.goalTask == nil && task.goalID == state.goals[0].id && task.percent == 50 && repo.tasks().count == 10 && repo.entries(taskID: task.id).count == 1,
+                            "每日任务选目标保存，同一任务和原进度历史保留")
+                state.page = .goals
+            case 19:
+                if let view = window.contentView { try saveView(view, to: state.dataFolder.appendingPathComponent("native-goal-linked.png")) }
+                try pressButton("加入已有工作")
+            case 20:
+                try type("不会匹配的筛选词")
+            case 21:
+                try key("\r", code: 36)
+                try require(state.existingWorkGoal != nil && repo.tasks().filter { $0.goalID == nil }.count == 2, "无匹配项不能保存")
+                try type("试用检查 · 写作")
+            case 22:
+                try clickChoice()
+            case 23:
+                try captureSheet("native-existing-work.png")
+                try key("\r", code: 36)
+            case 24:
+                let task = try repo.tasks().first { $0.title == "试用检查 · 写作" }!
+                try require(state.existingWorkGoal == nil && task.goalID == state.goals[0].id && task.percent == 50 && repo.tasks().count == 10, "目标页筛选并加入已有工作，不重复新增")
+                state.goalTask = task
+            case 25:
+                try clickChoice(offset: 90)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+                    do { try self?.key("\r", code: 36) } catch { print("保存按键失败：\(error)"); exit(1) }
+                }
+            case 26:
+                let task = try repo.tasks().first { $0.title == "试用检查 · 写作" }!
+                try require(state.goalTask == nil && task.goalID == nil && task.percent == 50, "移出目标仍保留每日工作与进度")
+                let other = try repo.addGoal(title: "控件验收 · 另一个目标")
+                try state.reload(); state.existingWorkGoal = other
+            case 27:
+                try type("控件验收 · 实际新增")
+            case 28:
+                try clickChoice()
+            case 29:
+                try captureSheet("native-goal-move.png")
+                try key("\r", code: 36)
+            case 30:
+                let task = try repo.tasks().first { $0.title == "控件验收 · 实际新增" }!
+                try require(state.existingWorkGoal == nil && task.goalID == state.goals[1].id && task.percent == 50 && repo.tasks().count == 10, "已属其他目标的工作确认后只更换归属")
                 let backup = try repo.backup()
                 let reopened = try Repository(path: repo.path)
                 try require(try backup == reopened.backup(), "界面操作后重开数据库无损")
                 try backup.write(to: state.dataFolder.appendingPathComponent("ui-backup.json"), options: .atomic)
-                print("原生控件流程全部通过；仅向本程序派发键盘事件，未申请系统辅助功能权限，未测试全局快捷键。")
+                print("原生控件流程全部通过；仅向本程序派发键盘和鼠标事件，未申请系统辅助功能权限，未测试全局快捷键。")
                 NSApplication.shared.terminate(nil)
                 return
             default: throw UserError("界面检查步骤无效")
@@ -74,6 +135,50 @@ import AppKit
                 print("当前任务：\(state.tasks.map(\.title))；焦点：\(String(describing: window?.attachedSheet?.firstResponder))")
             }
             print("原生控件流程失败：\(error)"); exit(1)
+        }
+    }
+    private func clickChoice(offset: CGFloat = 24) throws {
+        func find(_ view: NSView) -> NSScrollView? {
+            if let scroll = view as? NSScrollView { return scroll }
+            return view.subviews.lazy.compactMap { find($0) }.first
+        }
+        guard let view = window?.attachedSheet?.contentView, let scroll = find(view) else { throw UserError("未找到选择列表") }
+        let clip = scroll.contentView
+        let point = NSPoint(x: clip.bounds.minX + 90, y: clip.isFlipped ? clip.bounds.minY + offset : clip.bounds.maxY - offset)
+        try click(at: clip.convert(point, to: nil))
+    }
+    private func pressButton(_ title: String) throws {
+        func findScroll(_ view: NSView) -> NSScrollView? {
+            if let scroll = view as? NSScrollView { return scroll }
+            return view.subviews.lazy.compactMap { findScroll($0) }.first
+        }
+        func buttons(_ view: NSView) -> [NSButton] {
+            if let button = view as? NSButton { return [button] }
+            return view.subviews.flatMap { buttons($0) }
+        }
+        guard title == "加入已有工作", let view = window?.contentView, let scroll = findScroll(view),
+              let button = buttons(scroll).min(by: { $0.convert(.zero, to: nil).x < $1.convert(.zero, to: nil).x }) else {
+            throw UserError("未找到目标卡片的已有工作入口")
+        }
+        try click(at: button.convert(NSPoint(x: button.bounds.midX, y: button.bounds.midY), to: nil))
+    }
+    private func click(at point: NSPoint) throws {
+        guard let target = window?.attachedSheet ?? window else { throw UserError("点击窗口不存在") }
+        target.makeKeyAndOrderFront(nil)
+        for eventType in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+            guard let event = NSEvent.mouseEvent(with: eventType, location: point, modifierFlags: [],
+                                                timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: target.windowNumber,
+                                                context: nil, eventNumber: 0, clickCount: 1, pressure: 1) else { throw UserError("无法构造本窗口点击") }
+            NSApplication.shared.postEvent(event, atStart: false)
+        }
+    }
+    private func captureSheet(_ name: String) throws {
+        guard let view = window?.attachedSheet?.contentView, let state else { throw UserError("目标表单没有打开") }
+        let url = state.dataFolder.appendingPathComponent(name)
+        try saveView(view, to: url)
+        guard let bitmap = NSBitmapImageRep(data: try Data(contentsOf: url)),
+              let corner = bitmap.colorAt(x: 8, y: 8), corner.alphaComponent > 0.99 else {
+            throw UserError("目标表单背景应完整绘制，截图存在透明区域：" + name)
         }
     }
     private func type(_ text: String) throws {

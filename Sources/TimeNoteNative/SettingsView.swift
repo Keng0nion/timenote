@@ -59,8 +59,11 @@ struct SettingsView: View {
                         .font(.callout).foregroundStyle(.secondary)
                     Text("本地与在线 AI、取消/归档、网页备份迁移、自动更新暂未实现。").font(.callout).foregroundStyle(.secondary)
                 }
-                section("关于时间便签 0.1.0") {
+                section("关于时间便签 0.1.1") {
                     Text("SwiftUI / AppKit 原生软件 · 公开预览版")
+                    Text("© 2026 Kengo Kubota 和 Keng0nion · MIT 许可证")
+                        .font(.caption).textSelection(.enabled)
+                    Button("时间便签 MIT 许可") { openLicense("TimeNote-LICENSE") }
                     Text("已接入 GRDB.swift 7.11.1、KeyboardShortcuts 3.0.1（MIT）。Defaults 暂缓：几个开关使用系统设置存储即可，不重复引入一层。")
                         .font(.caption).foregroundStyle(.secondary)
                     HStack {

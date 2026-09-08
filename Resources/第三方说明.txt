@@ -1,4 +1,4 @@
-时间便签 0.1.0 · 第三方组件与构建说明
+时间便签 0.1.1 · 第三方组件与构建说明
 
 GRDB.swift 7.11.1
 来源：https://github.com/groue/GRDB.swift
@@ -27,4 +27,7 @@ GRDB 直接编译出现两条上游 Any/Sendable 警告，业务源码按警告�
 临时签名用于检查文件完整性，不等于 Apple 确认开发者身份或安全审核。
 仅在 macOS 26.6.2 / Apple Silicon 验证；构建目标 macOS 14.0，不代表该版本已实测。不支持 Intel Mac。
 源码与下载：https://github.com/Keng0nion/timenote
-主项目最终开源许可证尚未选择；公开源码不等于已获得自由再分发授权，第三方原有 MIT 许可不受影响。
+时间便签主项目采用 MIT 许可证，完整英文原文见包内 TimeNote-LICENSE.txt 或源码根目录 LICENSE。
+Copyright (c) 2026 Kengo Kubota and Keng0nion
+可以修改、商用与分发，但须保留版权和许可声明；按原样提供，不作担保。此中文说明不代替许可证原文。
+第三方组件继续使用各自的原 MIT 许可证和原版权署名，不由主项目版权声明替代。

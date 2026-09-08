@@ -32,15 +32,38 @@ class ReleaseChecks(unittest.TestCase):
         for text in [settings, third_party]:
             self.assertNotIn("未公开发布", text)
             self.assertNotIn("原始问卷", text)
-        self.assertIn("0.1.0 公开预览版", app)
+        self.assertIn("0.1.1 公开预览版", app)
         views = (sources / "Views.swift").read_text()
         self.assertNotIn("本地试用版", views)
-        self.assertIn("0.1.0 · 公开预览版", views)
+        self.assertIn("0.1.1 · 公开预览版", views)
         with (ROOT / "Resources" / "Info.plist").open("rb") as file:
             info = plistlib.load(file)
-        self.assertEqual(info["CFBundleShortVersionString"], "0.1.0")
+        self.assertEqual(info["CFBundleShortVersionString"], "0.1.1")
+        self.assertEqual(info["CFBundleVersion"], "2")
         self.assertEqual(info["CFBundleIdentifier"], "local.timenote.native.v1")
         self.assertEqual(info["CFBundleExecutable"], "TimeNote")
+
+    def test_main_license_and_bundled_entry(self):
+        license_path = ROOT / "LICENSE"
+        self.assertTrue(license_path.is_file(), "主项目必须提供 LICENSE")
+        text = license_path.read_text()
+        self.assertTrue(text.startswith("MIT License\n"))
+        self.assertIn("Copyright (c) 2026 Kengo Kubota and Keng0nion", text)
+        self.assertIn("Permission is hereby granted, free of charge", text)
+        self.assertIn("The above copyright notice and this permission notice", text)
+        self.assertIn('THE SOFTWARE IS PROVIDED "AS IS"', text)
+        source = (ROOT / "build.py").read_text()
+        self.assertIn('shutil.copy2(ROOT / "LICENSE", contents / "Resources" / "TimeNote-LICENSE.txt")', source)
+        settings = (ROOT / "Sources" / "TimeNoteNative" / "SettingsView.swift").read_text()
+        self.assertIn('openLicense("TimeNote-LICENSE")', settings)
+        self.assertIn("Kengo Kubota", settings)
+        self.assertIn("Keng0nion", settings)
+        for name in ["README.md", "RELEASE_NOTES.md", "Resources/第三方说明.txt"]:
+            text = (ROOT / name).read_text()
+            self.assertNotIn("许可证尚未选择", text)
+            self.assertIn("MIT", text)
+            self.assertIn("Kengo Kubota", text)
+            self.assertIn("Keng0nion", text)
 
 
 if __name__ == "__main__":

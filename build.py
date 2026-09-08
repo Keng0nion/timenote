@@ -106,6 +106,7 @@ def app(testing=False):
         info["CFBundleName"] = "时间便签测试"
     with (contents / "Info.plist").open("wb") as file:
         plistlib.dump(info, file)
+    shutil.copy2(ROOT / "LICENSE", contents / "Resources" / "TimeNote-LICENSE.txt")
     shutil.copy2(GRDB / "LICENSE", contents / "Resources" / "GRDB-LICENSE.txt")
     shutil.copy2(KEYS / "license", contents / "Resources" / "KeyboardShortcuts-LICENSE.txt")
     shutil.copy2(GRDB / "GRDB" / "PrivacyInfo.xcprivacy", contents / "Resources")

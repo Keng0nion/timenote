@@ -19,6 +19,8 @@ import UniformTypeIdentifiers
     @Published var editor: EditorContext?
     @Published var recordTask: WorkItem?
     @Published var historyTask: WorkItem?
+    @Published var goalTask: WorkItem?
+    @Published var existingWorkGoal: Goal?
     @Published var showGoal = false
     @Published var importData: Data?
     @Published var importPreview: ImportPreview?

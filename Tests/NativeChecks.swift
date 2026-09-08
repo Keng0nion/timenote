@@ -143,6 +143,82 @@ func rejects(_ message: String, _ body: () throws -> Void) throws {
         let fresh = try previewRepo.editableTasks(taskID: previewTask.id, series: false, now: now)
         try previewRepo.edit(taskID: previewTask.id, draft: proposed, series: false, now: now, expected: fresh)
         try check(try previewRepo.tasks()[0].title == proposed.title, "重新确认最新对比可保存")
+        try goalAssignmentChecks(root: root, now: now)
         print("原生数据检查全部通过；不代表标准 XCTest 或严格提醒通过。")
+    }
+
+    static func goalAssignmentChecks(root: URL, now: Date) throws {
+        let repo = try Repository(path: root.appendingPathComponent("goal-assignment.sqlite").path)
+        let goal = try repo.addGoal(title: "目标甲"), other = try repo.addGoal(title: "目标乙")
+        var draft = PlanDraft(title: "每日练习", category: "学习", day: "2026-09-07", start: 480, end: 540)
+        draft.repeatKind = .daily; draft.until = "2026-09-09"
+        try repo.add(draft, now: now)
+        let id = try repo.tasks()[0].id
+        try repo.record(taskID: id, percent: 50, note: "保留原备注", now: now)
+        try repo.record(taskID: id, percent: 100, note: "已完成", now: now)
+        try repo.undoLast(taskID: id, now: now)
+        let before = try repo.tasks(), entries = try repo.entries(taskID: id), oldBackup = try repo.backup()
+        let task = before[0]
+        try repo.setGoal(taskID: id, goalID: goal.id, expected: task)
+        var expected = task; expected.goalID = goal.id
+        let linked = try repo.tasks()
+        try check(linked[0] == expected, "历史任务关联只改变目标，日期时段和进度不变")
+        try check(linked.count == before.count && linked.dropFirst() == before.dropFirst(), "重复安排只关联选中单项，不复制或影响其他日期")
+        try check(try repo.entries(taskID: id) == entries, "关联不改动任何进展、备注和撤销历史")
+        try check(try Statistics.summary(linked).completionPercent == Statistics.summary(before).completionPercent,
+                  "关联后整体统计不重复计数")
+        try check(try Repository(path: repo.path).tasks() == linked, "目标关联在数据库重开后保留")
+        try repo.setGoal(taskID: id, goalID: goal.id, expected: expected)
+        let linkedBackup = try repo.backup()
+        try check(try repo.tasks() == linked && repo.entries(taskID: id) == entries, "已加入同一目标不产生重复工作或记录")
+        let restored = try Repository(path: root.appendingPathComponent("goal-restored.sqlite").path)
+        try restored.importBackup(linkedBackup)
+        try check(try restored.backup() == linkedBackup, "关联后的版本1备份完整往返")
+        try rejects("旧备份归属不同拒绝覆盖") { try repo.importBackup(oldBackup) }
+        try check(try repo.backup() == linkedBackup, "备份冲突不丢新的目标归属")
+        try rejects("已记录工作关联后仍禁止改历史安排") {
+            try repo.edit(taskID: id, draft: PlanDraft(task: expected), series: false, now: now)
+        }
+        try rejects("不存在的目标拒绝关联") {
+            try repo.setGoal(taskID: id, goalID: UUID().uuidString, expected: expected)
+        }
+        try rejects("不存在的任务拒绝关联") {
+            try repo.setGoal(taskID: UUID().uuidString, goalID: goal.id, expected: expected)
+        }
+        try rejects("不同任务的快照拒绝关联") {
+            try repo.setGoal(taskID: id, goalID: other.id, expected: before[1])
+        }
+        try check(try repo.backup() == linkedBackup, "关联校验失败完全不写入")
+        try repo.setGoal(taskID: id, goalID: other.id, expected: expected)
+        var moved = expected; moved.goalID = other.id
+        try check(try repo.tasks()[0] == moved && repo.tasks().filter { $0.goalID == goal.id }.isEmpty,
+                  "更换目标移动归属而不是复制")
+        let movedBackup = try repo.backup()
+        try rejects("过时目标选择不覆盖新归属") {
+            try repo.setGoal(taskID: id, goalID: nil, expected: expected)
+        }
+        try check(try repo.backup() == movedBackup, "过时归属操作不留下部分修改")
+        try repo.setGoal(taskID: id, goalID: nil, expected: moved)
+        try check(try repo.tasks() == before && repo.entries(taskID: id) == entries, "移出目标不删除任务或历史")
+        let started = try repo.tasks()[1]
+        try repo.setGoal(taskID: started.id, goalID: goal.id, expected: started)
+        var startedLinked = started; startedLinked.goalID = goal.id
+        try check(try repo.tasks()[1] == startedLinked, "已开始但未记录的工作可补充归属")
+        try rejects("已开始工作关联后仍不能改时段") {
+            try repo.edit(taskID: started.id, draft: PlanDraft(task: startedLinked), series: false, now: now)
+        }
+        let future = try repo.tasks()[2]
+        try repo.setGoal(taskID: future.id, goalID: other.id, expected: future)
+        var futureLinked = future; futureLinked.goalID = other.id
+        try check(try repo.tasks()[2] == futureLinked, "未来工作可单独关联目标")
+        try repo.record(taskID: id, percent: 75, note: "另一个窗口保存", now: now)
+        let newer = try repo.backup()
+        try rejects("选目标期间进度变化拒绝过时表单") {
+            try repo.setGoal(taskID: id, goalID: goal.id, expected: task)
+        }
+        try check(try repo.backup() == newer, "过时表单不会覆盖较新的进度")
+        let fresh = try repo.tasks()[0]
+        try repo.setGoal(taskID: id, goalID: goal.id, expected: fresh)
+        try check(try repo.tasks()[0].percent == 75 && repo.tasks()[0].goalID == goal.id, "重新打开最新任务后可关联并保留新进度")
     }
 }

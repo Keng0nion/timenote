@@ -25,7 +25,7 @@ import KeyboardShortcuts
         createMenus()
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1100, height: 780),
                               styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-        window.title = "时间便签 · 0.1.0 公开预览版"
+        window.title = "时间便签 · 0.1.1 公开预览版"
         window.minSize = NSSize(width: 940, height: 690)
         window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: RootView().environmentObject(state))
