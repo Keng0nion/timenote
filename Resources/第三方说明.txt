@@ -1,0 +1,30 @@
+时间便签 0.1.0 · 第三方组件与构建说明
+
+GRDB.swift 7.11.1
+来源：https://github.com/groue/GRDB.swift
+许可：MIT，完整原文见 GRDB-LICENSE.txt。
+用途：本机 SQLite 数据库、迁移、事务与历史保存。
+构建时由固定版本脚本获取上游源码，原样存于 Vendor/GRDB.swift-7.11.1；随包保留上游 PrivacyInfo.xcprivacy。
+
+KeyboardShortcuts 3.0.1
+来源：https://github.com/sindresorhus/KeyboardShortcuts
+许可：MIT，完整原文见 KeyboardShortcuts-LICENSE.txt。
+用途：用户自设打开窗口、新增工作快捷键及录入控件；默认不占用组合键。
+本机构建没有 SwiftUI 宏插件，因此 build.py 在项目缓存生成兼容副本：
+1. 将 ConflictPolicy.swift 的 @Entry 展开成等价 EnvironmentKey。
+2. 去除 Recorder.swift 末尾三个只用于开发预览的 #Preview。
+3. 添加本地化资源包访问代码，保留上游本地化文件。
+原 Vendor 源码没有改写。此适配未经上游确认，不代表完整上游测试通过。
+
+Defaults 未下载、未接入：首版两个回顾开关由系统 @AppStorage 保存。
+本软件未接入云同步、在线 AI 或自动更新，不会主动上传计划。
+
+直接编译入口：build.py（只使用本机已有 Swift 编译器，不安装工具）。
+两个依赖的官方固定版本下载地址和归档 SHA-256 见源码 dependencies.json。
+GRDB 直接编译出现两条上游 Any/Sendable 警告，业务源码按警告即失败方式编译。
+
+本包为 GitHub 公开预览版，仅有临时签名，无 Apple 开发者签名或公证。
+临时签名用于检查文件完整性，不等于 Apple 确认开发者身份或安全审核。
+仅在 macOS 26.6.2 / Apple Silicon 验证；构建目标 macOS 14.0，不代表该版本已实测。不支持 Intel Mac。
+源码与下载：https://github.com/Keng0nion/timenote
+主项目最终开源许可证尚未选择；公开源码不等于已获得自由再分发授权，第三方原有 MIT 许可不受影响。

@@ -1,0 +1,23 @@
+# 依赖由固定版本下载脚本获取；不重复上传上游仓库。
+Vendor/
+
+# 本机构建、安装包、截图和检查数据。
+.build-local/
+dist/
+release/
+__pycache__/
+*.pyc
+.DS_Store
+._*
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+*.log
+
+# 本机编辑器配置和凭据不公开。
+.zed/
+.env
+.env.*
+*.pem
+*.p12

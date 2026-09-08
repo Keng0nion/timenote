@@ -1,0 +1,18 @@
+[
+  {
+    "name": "GRDB.swift",
+    "version": "7.11.1",
+    "url": "https://codeload.github.com/groue/GRDB.swift/tar.gz/refs/tags/v7.11.1",
+    "sha256": "8a32c2c6c1c60e13799052ab73aea5c5ea888596a1cf2a660fe5b295bb4dda99",
+    "skippedNonRegularEntries": [
+      "GRDB.swift-7.11.1/Tests/CustomSQLite/GRDB"
+    ]
+  },
+  {
+    "name": "KeyboardShortcuts",
+    "version": "3.0.1",
+    "url": "https://codeload.github.com/sindresorhus/KeyboardShortcuts/tar.gz/refs/tags/3.0.1",
+    "sha256": "0492d1cc6898170dbf850cf3bae65be88e42af72b27960c82731e3058ce990c4",
+    "skippedNonRegularEntries": []
+  }
+]
