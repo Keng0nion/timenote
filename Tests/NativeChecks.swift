@@ -145,6 +145,7 @@ func rejects(_ message: String, _ body: () throws -> Void) throws {
         try check(try previewRepo.tasks()[0].title == proposed.title, "重新确认最新对比可保存")
         try goalAssignmentChecks(root: root, now: now)
         try actionChecks(root: root, now: now)
+        try cockpitChecks(root: root, now: now)
         print("原生数据检查全部通过；不代表标准 XCTest 或严格提醒通过。")
     }
 

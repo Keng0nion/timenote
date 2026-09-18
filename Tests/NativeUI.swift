@@ -1,5 +1,6 @@
 #if LOCAL_UI_TEST
 import AppKit
+import ApplicationServices
 
 @MainActor extension AppDelegate {
     func exerciseUI(_ step: Int = 0) {
@@ -231,19 +232,46 @@ import AppKit
         try click(at: clip.convert(point, to: nil))
     }
     private func pressButton(_ title: String) throws {
-        func findScroll(_ view: NSView) -> NSScrollView? {
-            if let scroll = view as? NSScrollView { return scroll }
-            return view.subviews.lazy.compactMap { findScroll($0) }.first
-        }
-        func buttons(_ view: NSView) -> [NSButton] {
-            if let button = view as? NSButton { return [button] }
-            return view.subviews.flatMap { buttons($0) }
-        }
-        guard title == "加入已有工作", let view = window?.contentView, let scroll = findScroll(view),
-              let button = buttons(scroll).min(by: { $0.convert(.zero, to: nil).x < $1.convert(.zero, to: nil).x }) else {
+        // macOS 27 起 SwiftUI 按钮不再由 NSButton 承载，子视图遍历找不到；改为经无障碍树按标识定位，
+        // 仍向真实按钮派发本窗口鼠标事件。自检本进程的无障碍树不申请辅助功能权限。
+        guard title == "加入已有工作", let state, let window = window, window.isVisible,
+              let goal = state.goals.first else {
             throw UserError("未找到目标卡片的已有工作入口")
         }
-        try click(at: button.convert(NSPoint(x: button.bounds.midX, y: button.bounds.midY), to: nil))
+        func find(_ element: AXUIElement) -> AXUIElement? {
+            var value: CFTypeRef?
+            AXUIElementCopyAttributeValue(element, kAXIdentifierAttribute as CFString, &value)
+            if let identifier = value as? String, identifier == "add-existing-\(goal.id)" { return element }
+            var children: CFTypeRef?
+            AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children)
+            if let list = children as? [AXUIElement] {
+                for child in list {
+                    if let found = find(child) { return found }
+                }
+            }
+            return nil
+        }
+        let appElement = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        guard let element = find(appElement) else {
+            throw UserError("未找到目标卡片的已有工作入口")
+        }
+        var positionValue: CFTypeRef?
+        var sizeValue: CFTypeRef?
+        AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &positionValue)
+        AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &sizeValue)
+        guard let positionAX = positionValue, let sizeAX = sizeValue else {
+            throw UserError("未找到目标卡片的已有工作入口")
+        }
+        var position = CGPoint.zero
+        var size = CGSize.zero
+        guard AXValueGetValue(unsafeDowncast(positionAX, to: AXValue.self), .cgPoint, &position),
+              AXValueGetValue(unsafeDowncast(sizeAX, to: AXValue.self), .cgSize, &size) else {
+            throw UserError("未找到目标卡片的已有工作入口")
+        }
+        let screenTop = NSScreen.screens[0].frame.height
+        let localX = position.x + size.width / 2 - window.frame.origin.x
+        let localY = screenTop - position.y - size.height / 2 - window.frame.origin.y
+        try click(at: NSPoint(x: localX, y: localY))
     }
     private func click(at point: NSPoint) throws {
         guard let target = window?.attachedSheet ?? window else { throw UserError("点击窗口不存在") }

@@ -17,7 +17,7 @@ struct RootView: View {
                         .accessibilityIdentifier("page-\(page.id)")
                 }
                 Spacer()
-                Text("0.1.2 · 公开预览版").font(.caption).foregroundStyle(.secondary)
+                Text("0.1.3 · 公开预览版").font(.caption).foregroundStyle(.secondary)
                 Text("严格提醒尚未启用").font(.caption).foregroundStyle(.secondary)
             }.padding(18).frame(width: 200).background(Style.panel.opacity(0.45))
             Divider()
@@ -87,7 +87,8 @@ struct TodayView: View {
                 Text("\(state.dayTasks.count) 项安排").foregroundStyle(.secondary)
             }
             SummaryBar(tasks: state.day > Day.string(state.now) ? state.dayTasks.map { var t = $0; t.percent = nil; return t } : state.dayTasks)
-            if state.dayTasks.isEmpty {
+            let visibleTasks = state.isViewingToday ? state.cockpitCandidates : state.dayTasks
+            if visibleTasks.isEmpty {
                 VStack(spacing: 14) {
                     Image(systemName: "note.text.badge.plus").font(.system(size: 40, weight: .light)).foregroundStyle(Style.accent)
                     Text("这一天还没有安排").font(.title3)
@@ -95,6 +96,22 @@ struct TodayView: View {
                         .multilineTextAlignment(.center).foregroundStyle(.secondary)
                     Button("添加第一项工作") { state.newWork() }.controlSize(.large).disabled(state.repository == nil)
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if state.isViewingToday {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        ForEach(state.cockpitSections, id: \.phase) { section in
+                            VStack(alignment: .leading, spacing: 0) {
+                                CockpitHeader(phase: section.phase, count: section.items.count)
+                                ForEach(section.items) { task in
+                                    WorkRow(task: task, detail: task.remainingMinutes(at: state.now).map { $0 > 0 ? "剩余 \($0) 分钟" : "即将结束" })
+                                    if task.id != section.items.last?.id {
+                                        Divider().padding(.leading, 50)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
@@ -104,16 +121,30 @@ struct TodayView: View {
                         }
                     }
                 }
-                Text(state.day > Day.string(state.now) ? "未来安排只显示计划，不提前计入历史成绩。" : "未记录不等于没完成。点百分比记录进展，原计划和每次修改都会留下。")
-                    .font(.caption).foregroundStyle(.secondary)
             }
+            Text(state.day > Day.string(state.now) ? "未来安排只显示计划，不提前计入历史成绩。" : "未记录不等于没完成。点百分比记录进展，原计划和每次修改都会留下。")
+                .font(.caption).foregroundStyle(.secondary)
         }.padding(28)
+    }
+}
+
+struct CockpitHeader: View {
+    let phase: WorkPhase
+    let count: Int
+    var body: some View {
+        HStack(spacing: 8) {
+            Rectangle().fill(Style.accent).frame(width: 3, height: 13).cornerRadius(1.5)
+            Text(phase.title).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            Spacer()
+            Text("\(count) 项").font(.caption).foregroundStyle(.tertiary)
+        }.padding(.bottom, 2)
     }
 }
 
 struct WorkRow: View {
     @EnvironmentObject var state: AppState
     let task: WorkItem
+    var detail: String? = nil
     var body: some View {
         HStack(spacing: 14) {
             Button {
@@ -130,6 +161,7 @@ struct WorkRow: View {
                     Text(task.rangeLabel).monospacedDigit()
                     if !task.category.isEmpty { Text(task.category) }
                     if task.seriesID != nil { Image(systemName: "repeat").help("重复安排") }
+                    if let detail { Text(detail).foregroundStyle(Style.accent) }
                 }.font(.caption).foregroundStyle(.secondary)
                 if let goal = state.goals.first(where: { $0.id == task.goalID }) {
                     Label(goal.title, systemImage: "flag").font(.caption).foregroundStyle(Style.accent)

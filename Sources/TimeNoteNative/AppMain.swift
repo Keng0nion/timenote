@@ -6,6 +6,9 @@ import KeyboardShortcuts
     var window: NSWindow?
     var state: AppState?
     var statusItem: NSStatusItem?
+    var statusMenu: NSMenu?
+    var popover: NSPopover?
+    let panelMonitor = PanelCloseMonitor()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let folder: URL
@@ -25,7 +28,7 @@ import KeyboardShortcuts
         createMenus()
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1100, height: 780),
                               styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-        window.title = "时间便签 · 0.1.2 公开预览版"
+        window.title = "时间便签 · 0.1.3 公开预览版"
         window.minSize = NSSize(width: 940, height: 690)
         window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: RootView().environmentObject(state))
@@ -41,7 +44,12 @@ import KeyboardShortcuts
         reminder.isEnabled = false; menu.addItem(reminder)
         menu.addItem(.separator())
         menu.addItem(actionItem("退出时间便签", #selector(quit)))
-        item.menu = menu; statusItem = item
+        statusMenu = menu
+        let button = item.button
+        button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        button?.target = self
+        button?.action = #selector(statusItemClicked(_:))
+        statusItem = item
         #if LOCAL_UI_TEST
         if arguments.contains("--dark") { NSApplication.shared.appearance = NSAppearance(named: .darkAqua) }
         if arguments.contains("--small") { window.setContentSize(NSSize(width: 940, height: 690)) }
@@ -53,6 +61,32 @@ import KeyboardShortcuts
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { showWindow(); return true }
+    @objc func statusItemClicked(_ sender: Any?) {
+        guard let event = NSApplication.shared.currentEvent, event.type == .rightMouseUp,
+              let item = statusItem, let menu = statusMenu else { togglePanel(); return }
+        item.menu = menu
+        item.button?.performClick(nil)
+        item.menu = nil
+    }
+    func togglePanel() {
+        if let panel = popover, panel.isShown {
+            panel.performClose(nil)
+            return
+        }
+        // 面板打开时点击图标：瞬态面板先自行关闭，短暂间隔内的再次触发不再重开，形成切换。
+        guard Date().timeIntervalSince(panelMonitor.lastClose) > 0.25,
+              let button = statusItem?.button else { return }
+        let panel = popover ?? makePanel()
+        popover = panel
+        panel.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+    }
+    private func makePanel() -> NSPopover {
+        let panel = NSPopover()
+        panel.behavior = .transient
+        panel.delegate = panelMonitor
+        if let state { panel.contentViewController = NSHostingController(rootView: StatusPanelView().environmentObject(state)) }
+        return panel
+    }
     @objc func showWindow() {
         NSApplication.shared.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
@@ -143,6 +177,11 @@ import KeyboardShortcuts
         try data.write(to: url, options: .atomic)
     }
     #endif
+}
+
+@MainActor final class PanelCloseMonitor: NSObject, NSPopoverDelegate {
+    var lastClose = Date.distantPast
+    func popoverDidClose(_ notification: Notification) { lastClose = Date() }
 }
 
 @main struct TimeNoteMain {

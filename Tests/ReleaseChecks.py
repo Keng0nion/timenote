@@ -32,14 +32,14 @@ class ReleaseChecks(unittest.TestCase):
         for text in [settings, third_party]:
             self.assertNotIn("未公开发布", text)
             self.assertNotIn("原始问卷", text)
-        self.assertIn("0.1.2 公开预览版", app)
+        self.assertIn("0.1.3 公开预览版", app)
         views = (sources / "Views.swift").read_text()
         self.assertNotIn("本地试用版", views)
-        self.assertIn("0.1.2 · 公开预览版", views)
+        self.assertIn("0.1.3 · 公开预览版", views)
         with (ROOT / "Resources" / "Info.plist").open("rb") as file:
             info = plistlib.load(file)
-        self.assertEqual(info["CFBundleShortVersionString"], "0.1.2")
-        self.assertEqual(info["CFBundleVersion"], "3")
+        self.assertEqual(info["CFBundleShortVersionString"], "0.1.3")
+        self.assertEqual(info["CFBundleVersion"], "4")
         self.assertEqual(info["CFBundleIdentifier"], "local.timenote.native.v1")
         self.assertEqual(info["CFBundleExecutable"], "TimeNote")
 

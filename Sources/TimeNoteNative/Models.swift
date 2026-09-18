@@ -179,6 +179,82 @@ struct WorkItem: Codable, FetchableRecord, PersistableRecord, Identifiable, Equa
     }
 }
 
+enum WorkPhase: Equatable, Hashable, Sendable {
+    case ongoing, upcoming, finishedUnrecorded, recorded
+    var title: String {
+        switch self {
+        case .ongoing: "现在进行"
+        case .upcoming: "接下来"
+        case .finishedUnrecorded: "待补记录"
+        case .recorded: "已记录"
+        }
+    }
+}
+
+/// 一项工作的计划时段。结束时刻按开始时刻加计划分钟推算，跨午夜不需要单独字段。
+/// 正常保存的数据都通过 validate，开始时刻一定能按当天时刻解析；若受夏令时缺口影响，
+/// 降级为当天正午加减分钟偏移，保证已保存的数据总能得到一个时段。
+struct WorkInterval: Equatable, Sendable {
+    let start: Date
+    let end: Date
+    init?(item: WorkItem) {
+        let resolved: Date?
+        if let exact = try? Day.date(item.day, time: item.start, zone: item.zone) {
+            resolved = exact
+        } else if let noon = try? Day.date(item.day, time: 720, zone: item.zone) {
+            resolved = noon.addingTimeInterval(TimeInterval(item.start - 720) * 60)
+        } else {
+            resolved = nil
+        }
+        guard let start = resolved else { return nil }
+        self.start = start
+        self.end = start.addingTimeInterval(TimeInterval(item.minutes) * 60)
+    }
+    func contains(_ now: Date) -> Bool { start <= now && now < end }
+}
+
+extension WorkItem {
+    func phase(at now: Date) -> WorkPhase {
+        let interval = WorkInterval(item: self)
+        if let interval, interval.contains(now) { return .ongoing }
+        if percent != nil { return .recorded }
+        guard let interval else { return day >= Day.string(now) ? .upcoming : .finishedUnrecorded }
+        return now < interval.start ? .upcoming : .finishedUnrecorded
+    }
+    /// 进行中时距结束还剩多少分钟（向上取整）；不进行中返回 nil。
+    func remainingMinutes(at date: Date) -> Int? {
+        guard let interval = WorkInterval(item: self), interval.contains(date) else { return nil }
+        return max(0, Int((interval.end.timeIntervalSince(date) / 60).rounded(.up)))
+    }
+    /// 未开始时距开始还有多少分钟（向上取整）；已开始返回 nil。
+    func minutesUntilStart(at date: Date) -> Int? {
+        guard let interval = WorkInterval(item: self), date < interval.start else { return nil }
+        return Int((interval.start.timeIntervalSince(date) / 60).rounded(.up))
+    }
+}
+
+/// 今日驾驶舱的候选与分区。统计口径不变：SummaryBar 仍按 dayTasks（归开始日）计算。
+enum Cockpit {
+    /// 查看今天的候选：今天的全部安排，加上昨天跨午夜、今天凌晨才结束的溢出安排。
+    /// 恰好在午夜整点结束（start + minutes == 1440）不算溢出，因为它不占用今天的时间。
+    static func candidates(tasks: [WorkItem], today: String) -> [WorkItem] {
+        let yesterday = (try? Day.shifted(today, by: -1)) ?? ""
+        return tasks.filter { task in
+            task.day == today || (task.day == yesterday && task.start + task.minutes > 1440)
+        }
+    }
+    /// 输入沿用数据库的 day、start、id 排序；输出只保留非空区，顺序固定。
+    static func sections(of tasks: [WorkItem], now: Date) -> [(phase: WorkPhase, items: [WorkItem])] {
+        let order: [WorkPhase] = [.ongoing, .upcoming, .finishedUnrecorded, .recorded]
+        var buckets: [WorkPhase: [WorkItem]] = [:]
+        for task in tasks { buckets[task.phase(at: now), default: []].append(task) }
+        return order.compactMap { phase in
+            guard let items = buckets[phase], !items.isEmpty else { return nil }
+            return (phase, items)
+        }
+    }
+}
+
 struct Goal: Codable, FetchableRecord, PersistableRecord, Identifiable, Equatable, Sendable {
     static let databaseTableName = "goal"
     var id: String

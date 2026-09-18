@@ -67,6 +67,17 @@ import UniformTypeIdentifiers
     }
     var day: String { Day.string(selectedDate) }
     var dayTasks: [WorkItem] { tasks.filter { $0.day == day } }
+    var isViewingToday: Bool { day == Day.string(now) }
+    /// 驾驶舱候选：查看今天时含昨日跨午夜溢出安排；查看其他日期时与 dayTasks 相同。
+    var cockpitCandidates: [WorkItem] {
+        isViewingToday ? Cockpit.candidates(tasks: tasks, today: day) : dayTasks
+    }
+    var cockpitSections: [(phase: WorkPhase, items: [WorkItem])] {
+        Cockpit.sections(of: cockpitCandidates, now: now)
+    }
+    var ongoingTasks: [WorkItem] {
+        cockpitSections.first { $0.phase == .ongoing }?.items ?? []
+    }
     var categories: [String] { Array(Set(tasks.map(\.category).filter { !$0.isEmpty })).sorted() }
     func newWork(goalID: String? = nil) {
         guard repository != nil else { error = "数据未能打开，暂时不能新增。"; return }
