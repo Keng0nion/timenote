@@ -1,20 +1,20 @@
 # 时间便签
 
-**把每天几点到几点的工作安排，变成看得见的长期积累。**
+**Turn your hourly schedule into visible, long-term progress.**
 
-时间便签是一款开源的 **macOS 原生计划与进展记录软件**。你可以写下长期目标，把它拆成每天要做的工作，手动记录完成程度，再通过日历、趋势和周／月回顾调整计划。
+TimeNote (时间便签) is an open-source **native macOS app for planning and tracking progress**. Write down long-term goals, break them into daily tasks, log how much you complete manually, and adjust your plan through the calendar, trends, and weekly/monthly reviews.
 
-它使用 **Swift + SwiftUI / AppKit** 开发，不是网页外壳。日常安排、记录和回顾不依赖在线服务：**不需要账号，工作、目标和进展保存在本机，没有云同步、遥测或主动上传。**
+It is built with **Swift + SwiftUI / AppKit**, not a web wrapper. Daily planning, logging, and review don't depend on online services: **no account is needed; tasks, goals, and progress are stored locally, with no cloud sync, telemetry, or proactive uploads.**
 
-> **当前版本：0.1.3 公开预览版。** 它已经可以用于本地安排、记录和回顾，但不是所有功能都完成的稳定版。**严格提醒尚未启用，睡眠或主程序完全退出后的准时持续响铃尚未实现、尚未验证，请不要用它代替重要闹钟。**
+> **Current version: 0.1.3 public preview.** It is already usable for local planning, logging, and review, but it is not a stable release with every feature complete. **Strict reminders are not enabled yet; a persistent, on-time alarm after sleep or after the main app has fully quit is neither implemented nor verified. Do not rely on it as a replacement for an important alarm.**
 >
-> 项目通过数据校验、保存前确认、数据库事务和分层测试提高可靠性；这些措施不等于“完美运行”或“永不丢失数据”。已验证范围、已知警告和未完成事项都在下文说明。
+> The project improves reliability through data validation, save-time confirmation, database transactions, and layered testing; these measures do not mean "runs perfectly" or "never loses data". The verified scope, known caveats, and outstanding items are described below.
 
-[下载 v0.1.3](https://github.com/Keng0nion/timenote/releases/tag/v0.1.3) · [版本说明](RELEASE_NOTES.md) · [问题反馈](https://github.com/Keng0nion/timenote/issues) · [MIT 许可证](LICENSE)
+[Download v0.1.3](https://github.com/Keng0nion/timenote/releases/tag/v0.1.3) · [Release notes](RELEASE_NOTES.md) · [Feedback](https://github.com/Keng0nion/timenote/issues) · [MIT license](LICENSE)
 
 ## 目录
 
-- [项目能做什么](#项目能做什么)
+- [What TimeNote does](#what-timenote-does)
 - [下载与安装](#下载与安装)
 - [核心概念与工作原理](#核心概念与工作原理)
 - [详细操作指南](#详细操作指南)
@@ -29,20 +29,20 @@
 - [反馈与参与](#反馈与参与)
 - [许可证与署名](#许可证与署名)
 
-## 项目能做什么
+## What TimeNote does
 
-时间便签关注的是：**今天准备做什么、实际完成多少、这些行动怎样积累成长期进展。** 它不自动替你判断目标，也不因为时间到了就把工作标为完成。
+TimeNote is about: **what you plan to do today, how much you actually complete, and how these actions accumulate into long-term progress.** It doesn't judge your goals for you, and it doesn't mark tasks as done just because the time has arrived.
 
-- **安排明确时段**：写下日期、开始时间、结束时间，自动算出计划分钟数，支持跨午夜。
-- **安排重复工作**：只做一次、每天、工作日或自选周几，按指定结束日期生成每日安排。
-- **保留真实进展**：手动填写 `0–100%` 和备注；每次记录、修正与单步撤销都保留进展历史。
-- **连接长期目标**：既能为目标新建工作，也能加入已有工作，不复制任务、不重复统计。
-- **把重复工作看成持续行动**：例如 30 天阅读在目标下显示为一项行动，每一天仍独立记录。
-- **回看积累**：日历、完成率趋势、上周分类回顾和上月整体回顾，未记录不会被当作失败。
-- **保护本地资料**：JSON 导出、导入前预览、编号冲突拒绝覆盖。
-- **快速打开**：菜单栏入口、应用内快捷键，以及用户自行设置的全局快捷键。
+- **Schedule explicit time slots**: enter a date, start time, and end time; the planned minutes are calculated automatically, including spans that cross midnight.
+- **Schedule repeating tasks**: once, every day, on weekdays, or on chosen weekdays, generating daily entries up to a specified end date.
+- **Keep an honest record of progress**: fill in `0–100%` and notes manually; every entry, correction, and single-step undo is kept in the progress history.
+- **Connect long-term goals**: create tasks for a goal or attach existing tasks, without duplicating tasks or double-counting.
+- **Treat repeating tasks as an ongoing action**: for example, 30 days of reading appears under a goal as one action, while each day is still recorded independently.
+- **Review your accumulation**: calendar, completion-rate trends, last week's category review, and last month's overall review; unrecorded days are never treated as failures.
+- **Protect local data**: JSON export, preview before import, and refusal to overwrite on ID conflicts.
+- **Quick access**: menu bar entry, in-app shortcuts, and user-defined global shortcuts.
 
-它目前**不是实际用时计时器、重要闹钟、自动排期助手或多设备同步工具**。
+It is currently **not** an elapsed-time timer, a critical alarm, an auto-scheduling assistant, or a multi-device sync tool.
 
 ## 下载与安装
 
