@@ -1,5 +1,7 @@
 # 时间便签
 
+![时间便签 · 每日清单](./docs/screenshot.png)
+
 **中文**　把每天几点到几点的工作安排，变成看得见的长期积累。
 **English**　Turn your hourly schedule into visible, long-term progress.
 **日本語**　毎日のスケジュールを、目に見える長期的な積み重ねに変える。
