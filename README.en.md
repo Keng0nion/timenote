@@ -6,6 +6,8 @@
 
 # TimeNote
 
+![TimeNote · Daily list](./docs/screenshot.png)
+
 Turn your day's hourly schedule into visible, long-term progress.
 
 TimeNote is an open-source **native macOS app for planning and recording progress**. You write down long-term goals, break them into daily tasks, log completion manually, and adjust your plan through the calendar, trends, and weekly/monthly reviews.
